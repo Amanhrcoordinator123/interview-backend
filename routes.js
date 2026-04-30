@@ -102,13 +102,20 @@ router.post("/interview/start", async (req, res) => {
   }
 });
 
-// ================== AUDIO UPLOAD (PHASE B) ==================
+// ================== AUDIO UPLOAD (PHASE C) ==================
 router.post(
   "/interview/upload-audio",
   upload.single("audio"),
   async (req, res) => {
+    console.log("✅ UPLOAD ROUTE HIT");
+
     try {
       const { sessionId, questionId } = req.body;
+
+      console.log("ENV CHECK", {
+        SUPABASE_URL: process.env.SUPABASE_URL,
+        HAS_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY
+      });
 
       if (!sessionId || !questionId) {
         return res.status(400).json({
@@ -122,18 +129,43 @@ router.post(
         });
       }
 
-      console.log("✅ Audio received:", {
-        sessionId,
-        questionId,
-        size: req.file.size,
-        type: req.file.mimetype
-      });
+      const filePath = `${sessionId}/question-${questionId}.webm`;
+      console.log("Attempting upload to bucket 'interviews' at:", filePath);
 
-      // Phase B: acknowledge receipt only
+      const { data, error } = await supabase.storage
+        .from("interviews")
+        .upload(filePath, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true
+        });
+
+      if (error) {
+        console.error("❌ SUPABASE STORAGE ERROR:", error);
+        return res.status(500).json({
+          error: error.message,
+          details: error
+        });
+      }
+
+      console.log("✅ STORAGE UPLOAD SUCCESS", data);
+
+      const { error: dbError } = await supabase
+        .from("responses")
+        .upsert({
+          session_id: sessionId,
+          question_id: questionId,
+          audio_path: filePath
+        });
+
+      if (dbError) {
+        console.error("❌ DB ERROR:", dbError);
+        return res.status(500).json({ error: dbError.message });
+      }
+
       res.json({ success: true });
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Audio upload failed" });
+      console.error("❌ UNCAUGHT ERROR:", err);
+      res.status(500).json({ error: err.message });
     }
   }
 );

@@ -1,3 +1,6 @@
+import "dotenv/config";
+console.log("SUPABASE_URL =", process.env.SUPABASE_URL);
+console.log("SUPABASE_SERVICE_KEY loaded =", !!process.env.SUPABASE_SERVICE_KEY);
 import express from "express";
 import cors from "cors";
 import router from "./routes.js";
