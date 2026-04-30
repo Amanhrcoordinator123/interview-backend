@@ -150,12 +150,18 @@ router.post(
       console.log("✅ STORAGE UPLOAD SUCCESS", data);
 
       const { error: dbError } = await supabase
-        .from("responses")
-        .upsert({
-          session_id: sessionId,
-          question_id: questionId,
-          audio_path: filePath
-        });
+  .from("responses")
+  .upsert(
+    {
+      session_id: sessionId,
+      question_id: questionId,
+      audio_path: filePath,
+      retry_count: 0
+    },
+    {
+      onConflict: "session_id,question_id"
+    }
+  );
 
       if (dbError) {
         console.error("❌ DB ERROR:", dbError);
@@ -170,6 +176,41 @@ router.post(
   }
 );
 
+// ================== REVIEW PLAYBACK ==================
+router.get("/interview/:sessionId/responses", async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    // 1️⃣ Fetch responses
+    const { data: responses, error } = await supabase
+      .from("responses")
+      .select("question_id, audio_path")
+      .eq("session_id", sessionId)
+      .order("question_id");
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // 2️⃣ Generate signed URLs
+    const results = await Promise.all(
+      responses.map(async (r) => {
+        const { data } = await supabase.storage
+          .from("interviews")
+          .createSignedUrl(r.audio_path, 60 * 60); // 1 hour
+
+        return {
+          questionId: r.question_id,
+          videoUrl: data?.signedUrl
+        };
+      })
+    );
+
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ================== SUBMIT INTERVIEW ==================
 router.post("/interview/submit", async (req, res) => {
   try {
