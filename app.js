@@ -10,7 +10,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "https://interview-2026.netlify.app",
-  "https://69ef9ac45cc4fd58a2e6d0d0--interview-2026.netlify.app"
+  "https://69f41007bc5d68b1e91ad71c--interview-2026.netlify.app"
 ];
 
 app.use(cors({
