@@ -107,8 +107,7 @@ router.post(
   "/interview/upload-audio",
   upload.single("audio"),
   async (req, res) => {
-    console.log("✅ UPLOAD ROUTE HIT");
-
+    
     try {
       const { sessionId, questionId } = req.body;
 
