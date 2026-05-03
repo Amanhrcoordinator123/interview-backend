@@ -52,53 +52,83 @@ router.get("/questions/:roleId", async (req, res) => {
 // ================== START INTERVIEW ==================
 router.post("/interview/start", async (req, res) => {
   try {
-    const { email, roleId } = req.body;
+    const { token, email } = req.body;
 
-    if (!email || !roleId) {
-      return res.status(400).json({ error: "Email and role are required" });
-    }
-
-    const { data: existing } = await supabase
-      .from("interview_sessions")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (existing) {
-      return res.status(409).json({ error: "Email already used" });
-    }
-
-    const { data: questions } = await supabase
-      .from("questions")
-      .select("id, question_text, order_index")
-      .eq("role_id", roleId)
-      .order("order_index");
-
-    if (!questions || questions.length === 0) {
-      return res.status(400).json({
-        error: "Invalid role or no questions configured"
+    if (!token) {
+      return res.status(401).json({
+        error: "Interview access token is required"
       });
     }
 
-    const sessionId = randomUUID();
+    // 1️⃣ Validate token
+    const { data: tokenRow, error: tokenError } = await supabase
+      .from("interview_tokens")
+      .select("*")
+      .eq("token", token)
+      .single();
+
+    if (tokenError || !tokenRow) {
+      return res.status(401).json({ error: "Invalid interview token" });
+    }
+
+    if (!tokenRow.is_active) {
+      return res.status(403).json({ error: "Interview access revoked" });
+    }
+
+    if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
+      return res.status(403).json({ error: "Interview token expired" });
+    }
+
+    // Optional: bind token to email
+    if (tokenRow.email && tokenRow.email !== email) {
+      return res.status(403).json({ error: "Email does not match token" });
+    }
+
+    // Optional: one‑time use enforcement
+    if (tokenRow.used_at) {
+      return res.status(403).json({ error: "Interview token already used" });
+    }
+
+    // 2️⃣ Fetch interview questions for the role
+    const { data: questions, error: qError } = await supabase
+      .from("questions")
+      .select("id, question_text, order_index")
+      .eq("role_id", tokenRow.role_id)
+      .order("order_index");
+
+    if (qError || !questions || questions.length === 0) {
+      return res.status(400).json({
+        error: "No questions configured for this role"
+      });
+    }
+
+    // 3️⃣ Create interview session
+    const sessionId = crypto.randomUUID();
 
     await supabase.from("interview_sessions").insert({
       id: sessionId,
       email,
-      role_id: roleId,
+      role_id: tokenRow.role_id,
       status: "IN_PROGRESS"
     });
+
+    // 4️⃣ Mark token as used
+    await supabase
+      .from("interview_tokens")
+      .update({ used_at: new Date() })
+      .eq("id", tokenRow.id);
 
     res.json({
       sessionId,
       totalQuestions: questions.length,
-      questions: questions.map(q => ({
+      questions: questions.map((q) => ({
         id: q.id,
         text: q.question_text
       }))
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Start interview error:", err);
+    res.status(500).json({ error: "Failed to start interview" });
   }
 });
 
