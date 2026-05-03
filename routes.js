@@ -132,79 +132,84 @@ router.post("/interview/start", async (req, res) => {
   }
 });
 
-// ================== AUDIO UPLOAD (PHASE C) ==================
+// ================== VIDEO / AUDIO UPLOAD ==================
 router.post(
   "/interview/upload-audio",
   upload.single("audio"),
   async (req, res) => {
-    
     try {
-      const { sessionId, questionId } = req.body;
-
-      console.log("ENV CHECK", {
-        SUPABASE_URL: process.env.SUPABASE_URL,
-        HAS_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY
-      });
+      const { sessionId, questionId, retryCount } = req.body;
 
       if (!sessionId || !questionId) {
-        return res.status(400).json({
-          error: "sessionId and questionId are required"
-        });
+        return res.status(400).json({ error: "Invalid upload payload" });
       }
 
       if (!req.file) {
-        return res.status(400).json({
-          error: "No audio file uploaded"
-        });
+        return res.status(400).json({ error: "No media file uploaded" });
+      }
+
+      // ✅ Verify interview session exists and is active
+      const { data: session, error: sessionError } = await supabase
+        .from("interview_sessions")
+        .select("status")
+        .eq("id", sessionId)
+        .single();
+
+      if (sessionError || !session) {
+        return res.status(400).json({ error: "Interview session not found" });
+      }
+
+      if (session.status !== "IN_PROGRESS") {
+        return res.status(403).json({ error: "Interview is not active" });
+      }
+
+      // ✅ Enforce retry limit
+      if (Number(retryCount) > 3) {
+        return res.status(403).json({ error: "Retry limit exceeded" });
       }
 
       const filePath = `${sessionId}/question-${questionId}.webm`;
-      console.log("Attempting upload to bucket 'interviews' at:", filePath);
 
-      const { data, error } = await supabase.storage
+      // ✅ Upload to Supabase Storage
+      const { data, error: uploadError } = await supabase.storage
         .from("interviews")
         .upload(filePath, req.file.buffer, {
           contentType: req.file.mimetype,
           upsert: true
         });
 
-      if (error) {
-        console.error("❌ SUPABASE STORAGE ERROR:", error);
-        return res.status(500).json({
-          error: error.message,
-          details: error
-        });
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        return res.status(500).json({ error: uploadError.message });
       }
 
-      console.log("✅ STORAGE UPLOAD SUCCESS", data);
-
+      // ✅ Save / update DB record
       const { error: dbError } = await supabase
-  .from("responses")
-  .upsert(
-    {
-      session_id: sessionId,
-      question_id: questionId,
-      audio_path: filePath,
-      retry_count: 0
-    },
-    {
-      onConflict: "session_id,question_id"
-    }
-  );
+        .from("responses")
+        .upsert(
+          {
+            session_id: sessionId,
+            question_id: questionId,
+            audio_path: filePath,
+            retry_count: Number(retryCount)
+          },
+          {
+            onConflict: "session_id,question_id"
+          }
+        );
 
       if (dbError) {
-        console.error("❌ DB ERROR:", dbError);
+        console.error("DB error:", dbError);
         return res.status(500).json({ error: dbError.message });
       }
 
       res.json({ success: true });
     } catch (err) {
-      console.error("❌ UNCAUGHT ERROR:", err);
-      res.status(500).json({ error: err.message });
+      console.error("Upload failed:", err);
+      res.status(500).json({ error: "Upload failed" });
     }
   }
 );
-
 // ================== REVIEW PLAYBACK ==================
 router.get("/interview/:sessionId/responses", async (req, res) => {
   try {
