@@ -138,14 +138,23 @@ router.post(
   upload.single("audio"),
   async (req, res) => {
     try {
-      const { sessionId, questionId, retryCount } = req.body;
+      // ✅ Default retryCount safely
+      const {
+        sessionId,
+        questionId,
+        retryCount = 0
+      } = req.body;
 
       if (!sessionId || !questionId) {
-        return res.status(400).json({ error: "Invalid upload payload" });
+        return res.status(400).json({
+          error: "Invalid upload payload (sessionId or questionId missing)"
+        });
       }
 
       if (!req.file) {
-        return res.status(400).json({ error: "No media file uploaded" });
+        return res.status(400).json({
+          error: "No media file uploaded"
+        });
       }
 
       // ✅ Verify interview session exists and is active
@@ -156,22 +165,29 @@ router.post(
         .single();
 
       if (sessionError || !session) {
-        return res.status(400).json({ error: "Interview session not found" });
+        return res.status(400).json({
+          error: "Interview session not found"
+        });
       }
 
       if (session.status !== "IN_PROGRESS") {
-        return res.status(403).json({ error: "Interview is not active" });
+        return res.status(403).json({
+          error: "Interview is not active"
+        });
       }
 
-      // ✅ Enforce retry limit
-      if (Number(retryCount) > 3) {
-        return res.status(403).json({ error: "Retry limit exceeded" });
+      // ✅ Enforce retry limit safely
+      const retries = Number(retryCount) || 0;
+      if (retries > 3) {
+        return res.status(403).json({
+          error: "Retry limit exceeded"
+        });
       }
 
       const filePath = `${sessionId}/question-${questionId}.webm`;
 
       // ✅ Upload to Supabase Storage
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("interviews")
         .upload(filePath, req.file.buffer, {
           contentType: req.file.mimetype,
@@ -180,7 +196,9 @@ router.post(
 
       if (uploadError) {
         console.error("Storage upload error:", uploadError);
-        return res.status(500).json({ error: uploadError.message });
+        return res.status(500).json({
+          error: uploadError.message
+        });
       }
 
       // ✅ Save / update DB record
@@ -191,7 +209,7 @@ router.post(
             session_id: sessionId,
             question_id: questionId,
             audio_path: filePath,
-            retry_count: Number(retryCount)
+            retry_count: retries
           },
           {
             onConflict: "session_id,question_id"
@@ -200,13 +218,17 @@ router.post(
 
       if (dbError) {
         console.error("DB error:", dbError);
-        return res.status(500).json({ error: dbError.message });
+        return res.status(500).json({
+          error: dbError.message
+        });
       }
 
       res.json({ success: true });
     } catch (err) {
       console.error("Upload failed:", err);
-      res.status(500).json({ error: "Upload failed" });
+      res.status(500).json({
+        error: "Upload failed"
+      });
     }
   }
 );
