@@ -1,6 +1,4 @@
 import "dotenv/config";
-console.log("SUPABASE_URL =", process.env.SUPABASE_URL);
-console.log("SUPABASE_SERVICE_KEY loaded =", !!process.env.SUPABASE_SERVICE_KEY);
 import express from "express";
 import cors from "cors";
 import router from "./routes.js";
@@ -9,16 +7,19 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://interview-2026.netlify.app",
-  "https://69f41007bc5d68b1e91ad71c--interview-2026.netlify.app"
+  "https://interview-2026.netlify.app"
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like curl, Postman)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // ✅ Allow all Netlify previews
+    if (origin.endsWith(".netlify.app")) {
       return callback(null, true);
     }
 
@@ -28,6 +29,9 @@ app.use(cors({
   allowedHeaders: ["Content-Type"]
 }));
 
+// ✅ REQUIRED FOR PREFLIGHT
+app.options("*", cors());
+
 app.use(express.json());
 app.use("/api", router);
 
@@ -35,4 +39,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ Backend running on port ${PORT}`);
 });
-``
