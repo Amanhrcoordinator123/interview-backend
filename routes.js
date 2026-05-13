@@ -103,21 +103,26 @@ router.post("/interview/start", async (req, res) => {
       });
     }
 
-    // ✅ FIXED UUID
+    // ✅ Create session correctly
     const sessionId = randomUUID();
 
-    // ✅ SAFE INSERT
-    const { error: insertError } = await supabase
+    const {
+      data: insertedSession,
+      error: insertError
+    } = await supabase
       .from("interview_sessions")
       .insert({
         id: sessionId,
         email,
         role_id: tokenRow.role_id,
         status: "IN_PROGRESS"
-      });
+      })
+      .select();
 
-    if (insertError) {
-      console.error("Session insert failed:", insertError);
+    console.log("📦 INSERT RESULT:", insertedSession);
+    console.log("❌ INSERT ERROR:", insertError);
+
+    if (insertError || !insertedSession || insertedSession.length === 0) {
       return res.status(500).json({
         error: "Failed to create interview session"
       });
@@ -156,7 +161,7 @@ router.post(
 
       if (!sessionId || !questionId) {
         return res.status(400).json({
-          error: "Invalid upload payload (sessionId or questionId missing)"
+          error: "Invalid upload payload"
         });
       }
 
@@ -170,7 +175,7 @@ router.post(
         .from("interview_sessions")
         .select("status")
         .eq("id", sessionId)
-        .single();
+        .maybeSingle(); // ✅ safer
 
       if (sessionError || !session) {
         console.error("❌ Session lookup failed:", sessionError);
@@ -235,7 +240,9 @@ router.post(
       res.json({ success: true });
     } catch (err) {
       console.error("Upload failed:", err);
-      res.status(500).json({ error: "Upload failed" });
+      res.status(500).json({
+        error: "Upload failed"
+      });
     }
   }
 );
