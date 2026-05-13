@@ -1,0 +1,32 @@
+INSERT INTO interview_tokens (
+  token,
+  role_id,
+  email,
+  is_active,
+  expires_at
+)
+VALUES (
+  'wa-vo-1001',
+  5,  -- Voice-Over Artist
+  'candidate2@email.com',
+  true,
+  NOW() + INTERVAL '7 days'
+);
+
+
+
+INSERT INTO interview_tokens (
+  token,
+  role_id,
+  email,
+  is_active,
+  expires_at
+)
+VALUES (
+  'wa-cs-2001',
+  6,  -- Customer Support Representative
+  'candidate3@email.com',
+  true,
+  NOW() + INTERVAL '7 days'
+);
+

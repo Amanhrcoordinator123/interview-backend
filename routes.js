@@ -9,7 +9,7 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 50 * 1024 * 1024
   }
 });
 
@@ -60,7 +60,6 @@ router.post("/interview/start", async (req, res) => {
       });
     }
 
-    // 1️⃣ Validate token
     const { data: tokenRow, error: tokenError } = await supabase
       .from("interview_tokens")
       .select("*")
@@ -75,21 +74,23 @@ router.post("/interview/start", async (req, res) => {
       return res.status(403).json({ error: "Interview access revoked" });
     }
 
-    if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) {
+    if (
+      tokenRow.expires_at &&
+      new Date(tokenRow.expires_at) < new Date()
+    ) {
       return res.status(403).json({ error: "Interview token expired" });
     }
 
-    // Optional: bind token to email
     if (tokenRow.email && tokenRow.email !== email) {
       return res.status(403).json({ error: "Email does not match token" });
     }
 
-    // Optional: one‑time use enforcement
     if (tokenRow.used_at) {
-      return res.status(403).json({ error: "Interview token already used" });
+      return res.status(403).json({
+        error: "Interview token already used"
+      });
     }
 
-    // 2️⃣ Fetch interview questions for the role
     const { data: questions, error: qError } = await supabase
       .from("questions")
       .select("id, question_text, order_index")
@@ -102,17 +103,28 @@ router.post("/interview/start", async (req, res) => {
       });
     }
 
-    // 3️⃣ Create interview session
-    const sessionId = crypto.randomUUID();
+    // ✅ FIXED UUID
+    const sessionId = randomUUID();
 
-    await supabase.from("interview_sessions").insert({
-      id: sessionId,
-      email,
-      role_id: tokenRow.role_id,
-      status: "IN_PROGRESS"
-    });
+    // ✅ SAFE INSERT
+    const { error: insertError } = await supabase
+      .from("interview_sessions")
+      .insert({
+        id: sessionId,
+        email,
+        role_id: tokenRow.role_id,
+        status: "IN_PROGRESS"
+      });
 
-    // 4️⃣ Mark token as used
+    if (insertError) {
+      console.error("Session insert failed:", insertError);
+      return res.status(500).json({
+        error: "Failed to create interview session"
+      });
+    }
+
+    console.log("✅ Session created:", sessionId);
+
     await supabase
       .from("interview_tokens")
       .update({ used_at: new Date() })
@@ -132,18 +144,15 @@ router.post("/interview/start", async (req, res) => {
   }
 });
 
-// ================== VIDEO / AUDIO UPLOAD ==================
+// ================== AUDIO UPLOAD ==================
 router.post(
   "/interview/upload-audio",
   upload.single("audio"),
   async (req, res) => {
     try {
-      // ✅ Default retryCount safely
-      const {
-        sessionId,
-        questionId,
-        retryCount = 0
-      } = req.body;
+      const { sessionId, questionId, retryCount = 0 } = req.body;
+
+      console.log("📥 UPLOAD BODY:", req.body);
 
       if (!sessionId || !questionId) {
         return res.status(400).json({
@@ -157,7 +166,6 @@ router.post(
         });
       }
 
-      // ✅ Verify interview session exists and is active
       const { data: session, error: sessionError } = await supabase
         .from("interview_sessions")
         .select("status")
@@ -165,6 +173,7 @@ router.post(
         .single();
 
       if (sessionError || !session) {
+        console.error("❌ Session lookup failed:", sessionError);
         return res.status(400).json({
           error: "Interview session not found"
         });
@@ -176,8 +185,8 @@ router.post(
         });
       }
 
-      // ✅ Enforce retry limit safely
       const retries = Number(retryCount) || 0;
+
       if (retries > 3) {
         return res.status(403).json({
           error: "Retry limit exceeded"
@@ -186,7 +195,6 @@ router.post(
 
       const filePath = `${sessionId}/question-${questionId}.webm`;
 
-      // ✅ Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from("interviews")
         .upload(filePath, req.file.buffer, {
@@ -201,7 +209,6 @@ router.post(
         });
       }
 
-      // ✅ Save / update DB record
       const { error: dbError } = await supabase
         .from("responses")
         .upsert(
@@ -223,94 +230,14 @@ router.post(
         });
       }
 
+      console.log("✅ Upload successful");
+
       res.json({ success: true });
     } catch (err) {
       console.error("Upload failed:", err);
-      res.status(500).json({
-        error: "Upload failed"
-      });
+      res.status(500).json({ error: "Upload failed" });
     }
   }
 );
-// ================== REVIEW PLAYBACK ==================
-router.get("/interview/:sessionId/responses", async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-
-    // 1️⃣ Fetch responses
-    const { data: responses, error } = await supabase
-      .from("responses")
-      .select("question_id, audio_path")
-      .eq("session_id", sessionId)
-      .order("question_id");
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    // 2️⃣ Generate signed URLs
-    const results = await Promise.all(
-      responses.map(async (r) => {
-        const { data } = await supabase.storage
-          .from("interviews")
-          .createSignedUrl(r.audio_path, 60 * 60); // 1 hour
-
-        return {
-          questionId: r.question_id,
-          videoUrl: data?.signedUrl
-        };
-      })
-    );
-
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// ================== SUBMIT INTERVIEW ==================
-router.post("/interview/submit", async (req, res) => {
-  try {
-    const { sessionId } = req.body;
-
-    if (!sessionId) {
-      return res.status(400).json({ error: "sessionId is required" });
-    }
-
-    const { data: session, error: fetchError } = await supabase
-      .from("interview_sessions")
-      .select("status")
-      .eq("id", sessionId)
-      .single();
-
-    if (fetchError || !session) {
-      return res.status(404).json({ error: "Interview session not found" });
-    }
-
-    if (session.status === "COMPLETED") {
-      return res.status(400).json({
-        error: "Interview already submitted"
-      });
-    }
-
-    const { error: updateError } = await supabase
-      .from("interview_sessions")
-      .update({
-        status: "COMPLETED",
-        completed_at: new Date()
-      })
-      .eq("id", sessionId);
-
-    if (updateError) {
-      return res.status(500).json({ error: updateError.message });
-    }
-
-    res.json({
-      success: true,
-      message: "Interview submitted successfully"
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 export default router;

@@ -1,0 +1,256 @@
+
+✅ Interview Question Sets (HR‑Ready)
+These question sets are designed for asynchronous video/audio interviews, with:
+
+Clear consent & compliance
+Role‑specific evaluation
+Consistent structure across roles
+Easy insertion into Supabase (questions table)
+Each role follows this pattern:
+
+Consent & intro (paperwork)
+Experience / skills
+Practical or scenario question
+Role‑specific depth
+Closing / availability
+You can copy questions directly into Supabase and adjust wording anytime.
+
+
+🎙️ Voice‑Over Artist
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Voice Experience
+
+Describe your experience with voice‑over work. What types of projects have you done (commercials, narration, audiobooks, etc.)?
+
+
+Q3 — Performance Sample
+
+Please read the following short script clearly and naturally: “At WestAtlantic, we believe communication should be clear, confident, and human.”
+
+
+Q4 — Technique & Setup
+
+What recording equipment and software do you currently use, and how do you ensure good audio quality?
+
+
+Q5 — Availability & Reliability
+
+What is your availability for ongoing or urgent voice‑over projects?
+
+
+
+
+🎧 Customer Support Representative
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Support Experience
+
+Tell us about your experience in customer support or client‑facing roles.
+
+
+Q3 — Scenario Handling
+
+A customer is upset about a delayed service. How would you handle the situation from first contact to resolution?
+
+
+Q4 — Communication Skills
+
+How do you stay calm and professional when dealing with difficult customers?
+
+
+Q5 — Availability & Tools
+
+What hours are you available to work, and what customer support tools have you used before?
+
+
+
+
+⌨️ Data Entry Specialist
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Accuracy & Experience
+
+Describe your experience with data entry or administrative tasks.
+
+
+Q3 — Attention to Detail
+
+How do you ensure accuracy when working with large amounts of data?
+
+
+Q4 — Tools & Speed
+
+What tools or software have you used for data entry, and how do you balance speed with accuracy?
+
+
+Q5 — Availability
+
+What is your availability for ongoing data entry work?
+
+
+
+
+✍️ Proofreader / Writer
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Writing Background
+
+Tell us about your experience in writing or proofreading.
+
+
+Q3 — Quality & Style
+
+How do you adapt your writing or proofreading style to different audiences or brands?
+
+
+Q4 — Error Detection
+
+What types of errors do you look for first when proofreading a document?
+
+
+Q5 — Availability & Turnaround
+
+What is your typical turnaround time for written tasks?
+
+
+
+
+📝 Copywriter
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Copywriting Experience
+
+Describe your experience writing marketing or sales copy.
+
+
+Q3 — Brand Voice
+
+How do you adapt your copy to match a company’s brand voice?
+
+
+Q4 — Persuasion Example
+
+Describe a piece of copy you’re proud of and why it was effective.
+
+
+Q5 — Availability & Revisions
+
+How do you handle feedback and revisions, and what is your availability?
+
+
+
+
+🎓 Online Tutor
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Teaching Experience
+
+Tell us about your experience teaching or tutoring online.
+
+
+Q3 — Explanation Skills
+
+How do you explain complex topics to learners with different skill levels?
+
+
+Q4 — Engagement
+
+How do you keep students engaged during online sessions?
+
+
+Q5 — Availability & Subjects
+
+What subjects can you teach, and what is your availability?
+
+
+
+
+🎧 Transcriber
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Transcription Experience
+
+Describe your experience with transcription or captioning work.
+
+
+Q3 — Accuracy & Speed
+
+How do you balance speed with accuracy when transcribing audio?
+
+
+Q4 — Tools & Formats
+
+What transcription tools or formats are you familiar with?
+
+
+Q5 — Availability
+
+What is your availability for transcription projects?
+
+
+
+
+🌐 Interpreter
+Q1 — Consent & Introduction
+
+This interview will be recorded. Do you consent to proceed, and please introduce yourself.
+
+
+Q2 — Language Proficiency
+
+Which languages do you interpret, and at what proficiency levels?
+
+
+Q3 — Interpretation Scenario
+
+Describe how you would handle interpreting a conversation with technical or unfamiliar terms.
+
+
+Q4 — Accuracy & Ethics
+
+How do you ensure accuracy and confidentiality during interpretation?
+
+
+Q5 — Availability & Settings
+
+What types of interpretation settings are you comfortable with, and what is your availability?
+
+
+
+
+✅ HR Notes (Recommended)
+
+Keep 5–6 questions per role for best completion rates
+Place consent as Question 1 for compliance
+Avoid changing ids — edit text instead
+Deactivate questions instead of deleting them
+
+
+If you want next, I can:
+
+✅ Generate SQL inserts for these questions
+✅ Create scoring rubrics per role
+✅ Design an admin UI for managing questions
+✅ Customize wording to match WestAtlantic’s tone

@@ -1,0 +1,4 @@
+UPDATE interview_tokens
+SET used_at = NULL,
+    is_active = true
+WHERE token = 'wa-frontend-0923';
