@@ -246,5 +246,61 @@ router.post(
     }
   }
 );
+// ================== SUBMIT INTERVIEW ==================
+router.post("/interview/submit", async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: "sessionId is required"
+      });
+    }
+
+    const { data: session, error: fetchError } = await supabase
+      .from("interview_sessions")
+      .select("status")
+      .eq("id", sessionId)
+      .maybeSingle();
+
+    if (fetchError || !session) {
+      return res.status(404).json({
+        error: "Interview session not found"
+      });
+    }
+
+    if (session.status === "COMPLETED") {
+      return res.status(400).json({
+        error: "Interview already submitted"
+      });
+    }
+
+    const { error: updateError } = await supabase
+      .from("interview_sessions")
+      .update({
+        status: "COMPLETED",
+        completed_at: new Date()
+      })
+      .eq("id", sessionId);
+
+    if (updateError) {
+      return res.status(500).json({
+        error: updateError.message
+      });
+    }
+
+    console.log("✅ Interview submitted:", sessionId);
+
+    res.json({
+      success: true,
+      message: "Interview submitted successfully"
+    });
+  } catch (err) {
+    console.error("Submit error:", err);
+    res.status(500).json({
+      error: "Failed to submit interview"
+    });
+  }
+});
 
 export default router;
